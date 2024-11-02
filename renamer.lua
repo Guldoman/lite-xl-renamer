@@ -502,4 +502,26 @@ function Renamer:is(T)
   return self.super.is(self, T)
 end
 
+-- Workaround needed because Windows doesn't send the correct drop coordinates (see https://github.com/lite-xl/lite-xl/issues/1925)
+if PLATFORM == "Windows" then
+  local on_event = core.on_event
+  local suspended_drops = { }
+  function core.on_event(type, ...)
+    if type == "mousemoved" then
+      if #suspended_drops > 0 then
+        local mx, my = ...
+        for _,file in ipairs(suspended_drops) do
+          on_event("filedropped", file, mx, my)
+        end
+        suspended_drops = { }
+      end
+    elseif type == "filedropped" then
+      local file = ...
+      table.insert(suspended_drops, file)
+      return false
+    end
+    return on_event(type, ...)
+  end
+end
+
 return Renamer
